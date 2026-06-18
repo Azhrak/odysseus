@@ -1769,6 +1769,11 @@ def setup_cookbook_routes() -> APIRouter:
             host = remote.split("@")[-1] if "@" in remote else remote
         elif re.search(r"\bdocker\s+exec\s+(?:ollama-rocm|ollama-test)\b", req.cmd or ""):
             host = "host.docker.internal"
+        elif (not remote and os.path.exists("/.dockerenv")
+              and re.search(r"\bollama\s+serve\b", req.cmd or "")):
+            # Odysseus in Docker + local ollama serve → host's Ollama is the
+            # actual endpoint; register at host.docker.internal, not localhost.
+            host = "host.docker.internal"
         else:
             host = "localhost"
 
