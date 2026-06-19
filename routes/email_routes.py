@@ -1308,7 +1308,8 @@ def _normalize_addr_field(field: str) -> str:
     """Strip the malformed-but-common trailing/leading commas and stray
     whitespace from a To/Cc/Bcc string before it lands in the MIME header
     or the SMTP envelope. Users often paste a single address with a
-    trailing comma, which most MTAs reject as a syntax error. Collapse
+    trailing comma (e.g. `felix@pewdiepie.com,`) and most MTAs reject the
+    resulting `To: felix@pewdiepie.com,` line as a syntax error. Collapse
     any run of separator junk between addresses too."""
     if not field:
         return field
