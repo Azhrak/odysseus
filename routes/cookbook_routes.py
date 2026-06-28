@@ -2010,6 +2010,26 @@ def setup_cookbook_routes() -> APIRouter:
         # `docker exec ollama-test ollama-import …` get wrapped as if they
         # were native `ollama serve`, prepending OLLAMA_HOST=… and then
         # running the ollama-not-found preflight which exits 127.
+        _serve_in_container = not remote and os.path.exists("/.dockerenv")
+        # HF-GGUF + local Docker + Ollama is unsupported: the container has no
+        # ollama binary, so the runner only probes the host daemon — it can NOT
+        # import a HuggingFace GGUF repo into host Ollama or create the tag. A
+        # plain `ollama serve` here would report success and pin the HF repo as
+        # an available model the host daemon cannot actually serve, surfacing as
+        # a model-not-found failure at chat time. Reject early with guidance
+        # instead. (Remote hosts use the `docker exec … ollama-import` helper
+        # path built in cookbook.js, which does import the GGUF.)
+        if (_serve_in_container
+                and re.search(r"\bollama\s+serve\b", req.cmd)
+                and "/" in req.repo_id):
+            raise HTTPException(
+                400,
+                "Serving a HuggingFace GGUF repo through Ollama is not supported "
+                "when Odysseus runs in Docker: the container cannot import the "
+                "GGUF into your host's Ollama. Pull the model into host Ollama "
+                "first (e.g. `ollama pull <name>`), then select that Ollama tag "
+                "here; or run a llama.cpp/vLLM backend for the GGUF instead.",
+            )
         if re.search(r"\bollama\s+serve\b", req.cmd) and "OLLAMA_HOST=" not in req.cmd:
             _ollama_bind_host = "0.0.0.0" if remote else "127.0.0.1"
             _ollama_chosen_port = _pick_free_port_for_ollama(

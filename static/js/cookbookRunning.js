@@ -10,6 +10,7 @@ import { registerMenuDismiss } from './escMenuStack.js';
 import { computeProgressSignal } from './cookbookProgressSignal.js';
 import { portOf, nextFreePort } from './cookbookPorts.js';
 import { topPortalZ } from './toolWindowZOrder.js';
+import { _ollamaBaseUrlForTask } from './cookbookOllamaUrl.js';
 
 // Human-friendly badge label for a task's internal status. Avoids surfacing
 // the word "error" in the sidebar — a server the user stopped or one that
@@ -1130,21 +1131,11 @@ function _taskLooksOllama(task, outputText = '') {
   return /\bollama\b/i.test(haystack) || /Ollama API ready on port\s+\d+/i.test(haystack);
 }
 
-function _ollamaBaseUrlForTask(task, outputText = '') {
-  const out = String(outputText || '');
-  const ready = out.match(/Ollama API ready on port\s+\d+:\s*(http:\/\/[^\s]+)/i);
-  if (ready) return ready[1].replace(/\/+$/, '');
-  const cmd = String(task?.payload?._cmd || '');
-  const host = cmd.match(/OLLAMA_HOST=([^\s]+)/)?.[1] || '';
-  const port = host.match(/:(\d+)$/)?.[1] || '11434';
-  return `http://127.0.0.1:${port}`;
-}
-
 function _ollamaModelForTask(task) {
   return String(task?.payload?.model || task?.payload?.repo_id || task?.name || '').trim();
 }
 
-function _ollamaUnloadCommand(task, outputText = '') {
+export function _ollamaUnloadCommand(task, outputText = '') {
   if (!_taskLooksOllama(task, outputText)) return '';
   const model = _ollamaModelForTask(task);
   if (!model) return '';
@@ -1158,7 +1149,7 @@ function _ollamaUnloadCommand(task, outputText = '') {
   return inner;
 }
 
-function _endpointUrlForTask(task, outputText = '') {
+export function _endpointUrlForTask(task, outputText = '') {
   if (_taskLooksOllama(task, outputText)) {
     return _ollamaBaseUrlForTask(task, outputText) + '/v1';
   }
